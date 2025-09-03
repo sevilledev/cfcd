@@ -1,0 +1,14 @@
+alpha: 1.10          # safety headroom (default)
+epsilon: 0.08        # max under-provision risk (<= 8%)
+metrics: [cpu_pct, iops, credits]
+
+instances:
+  - name: db.small
+    cap: { cpu_pct: 40, iops: 1000, credits: 4 }
+    cost_per_hour: 0.10
+  - name: db.medium
+    cap: { cpu_pct: 70, iops: 2000, credits: 8 }
+    cost_per_hour: 0.19
+  - name: db.large
+    cap: { cpu_pct: 120, iops: 3500, credits: 16 }
+    cost_per_hour: 0.34

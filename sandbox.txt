@@ -1,0 +1,4 @@
+pip install pandas numpy pyyaml typer statsmodels
+python app.py forecast --data data/metrics.csv --catalog config/catalog.yaml
+python app.py plan --data data/metrics.csv --catalog config/catalog.yaml
+python app.py backtest --data data/metrics.csv --catalog config/catalog.yaml
