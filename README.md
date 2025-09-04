@@ -1,27 +1,37 @@
 # Cloud Database Capacity Forecasting
 
-A minimal demo project for forecasting cloud database workloads and automatically planning instance schedules to **reduce costs while maintaining SLA compliance**.
+A demo project that forecasts cloud database workloads and **automatically chooses the cheapest instance size** while still keeping performance reliable.
 
 ---
 
-## 🚀 Problem
+## 📌 Problem
 
-Cloud databases are expensive:
-
-* **Over-provisioning** wastes money.
-* **Under-provisioning** risks downtime and SLA violations.
-
-We need a system that balances cost and reliability automatically.
+* If we **over-provision** cloud databases → money is wasted.
+* If we **under-provision** → the system risks downtime and SLA violations.
+* Cloud teams need a way to balance **cost vs. reliability** automatically.
 
 ---
 
-## 💡 Solution
+## 💡 Our Solution
 
-This project implements a **forecasting + scheduling service**:
+1. **Forecast demand**
 
-1. **Forecast** hourly workload (CPU%, IOPS, Credits) using historical data.
-2. **Plan** cheapest instance per hour, based on P90 demand and safety headroom (α).
-3. **Backtest** against history to ensure under-provision ≤ ε%.
+   * For each hour of the week, we predict workload (CPU, IOPS, Credits).
+   * We use **P90 forecast** → a high but not extreme value, covering 90% of cases.
+
+2. **Choose instances**
+
+   * We define instance types in a catalog:
+
+     * `db.small` = cheap but low capacity
+     * `db.medium` = more capacity, more expensive
+     * `db.large` = high capacity, highest price
+   * The system picks the **cheapest instance** that can safely handle the forecast.
+
+3. **Control risk**
+
+   * Add a safety margin (α).
+   * Limit under-provisioning risk to ≤ ε% (example: ≤ 8%).
 
 ---
 
@@ -31,14 +41,14 @@ This project implements a **forecasting + scheduling service**:
 project/
  ├─ app.py                # CLI entrypoint
  ├─ core/
- │   ├─ forecast.py        # P90 forecasting from history
- │   ├─ plan.py            # Schedule builder (choose instances)
+ │   ├─ forecast.py        # Builds P90 forecast
+ │   ├─ plan.py            # Chooses cheapest instance
  │   └─ __init__.py
  ├─ data/
- │   └─ metrics.csv        # Sample input data (24h workload)
+ │   └─ metrics.csv        # Sample hourly workload data
  ├─ config/
- │   └─ catalog.yaml       # Instance types, costs, α, ε
- └─ requirements.txt       # Python dependencies
+ │   └─ catalog.yaml       # Instance types, capacities, costs
+ └─ requirements.txt       # Dependencies
 ```
 
 ---
@@ -59,7 +69,7 @@ pip install -r requirements.txt
 python app.py forecast data/metrics.csv config/catalog.yaml
 ```
 
-→ Outputs **`forecast.csv`** with hourly P90 predictions.
+👉 Generates **forecast.csv** with predicted hourly workload (P90).
 
 ### 2. Plan instance schedule
 
@@ -67,15 +77,15 @@ python app.py forecast data/metrics.csv config/catalog.yaml
 python app.py plan forecast.csv config/catalog.yaml
 ```
 
-→ Outputs **`schedule.csv`** with cheapest instance per hour.
+👉 Generates **schedule.csv** with cheapest instance per hour.
 
-### 3. Backtest reliability
+### 3. Backtest on history
 
 ```bash
 python app.py backtest data/metrics.csv config/catalog.yaml
 ```
 
-→ Prints under-provision risk, e.g.:
+👉 Prints under-provision rate, e.g.:
 
 ```
 Approximate under-provision rate on history: 0.083
@@ -105,21 +115,16 @@ ts,instance,cost_per_hour
 
 ---
 
-## 📝 Code Overview
+## 📝 Code Explanation
 
-* **`app.py`**
-  CLI with 3 commands: `forecast`, `plan`, `backtest`.
-* **`core/forecast.py`**
-  Groups historical metrics by hour-of-week, computes **90th percentile forecast**.
-* **`core/plan.py`**
-  Contains `build_schedule()` that picks cheapest instance per hour given α.
-* **`backtest` logic (in app.py)**
-  Reuses `build_schedule()` on historical data, measures **under-provision rate**.
+* **`forecast.py`** → Calculates **P90 forecast per hour** using historical data.
+* **`plan.py`** → Contains `build_schedule()`, which picks the cheapest instance that satisfies demand with safety margin α.
+* **`app.py`** → CLI with 3 commands: `forecast`, `plan`, `backtest`.
+* **`catalog.yaml`** → Defines instance sizes (`db.small`, `db.medium`, `db.large`), their capacities, and hourly cost.
 
 ---
 
-## ✅ What We Achieved
+## ✅ Results
 
-* Automatic workload forecasting.
-* Cost-aware scheduling under SLA constraints.
-* Risk control: system tuned α = 1.3 to reach under-provision ≈ 8%.
+* The system automatically adjusted **α = 1.3**, keeping under-provision risk ≈ **8.3%**.
+* This means **cheaper scaling** while still keeping SLA reliability.
